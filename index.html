@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>RxJS Playground</title>
+	<style>
+		body {
+			padding-top: 50px;
+		}
+		#chart {
+			width: 800px;
+			margin-left: auto;
+			margin-right: auto;
+		}
+		.chart {
+			border-top: 5px solid #ccc;
+			border-bottom: 5px solid #ccc;
+		}
+		.line {
+			fill: none;
+			stroke: steelblue;
+			stroke-width: 5px;
+		}
+	</style>
+</head>
+<body>
+	<div id="chart"></div>
+	<script src="scripts/d3.v4.min.js"></script>
+	<script src="scripts/rx.all.js"></script>
+	<script>
+		(function bootstrap() {
+
+			/**
+			 *
+			 *  In RxJS a data source could be made of events, streams, promises, etc.
+			 *
+			 *  Some examples of data sources:
+			 *    - real-time data from websockets
+			 *    - ajax requests
+			 *    - window resizes
+			 *    - mouse movement
+			 *    - mouse clicks
+			 *    - and so forth..
+			 *
+			 */
+
+			// I'm using an hot observable to simulate a source of constantly streaming data
+			// This could be any type of data, like a game controller, live stock market data etc.
+			var mockDataSource1 = Rx.Observable.interval(50 /* ms */).timeInterval();
+			var mockDataSource2 = Rx.Observable.interval(30 /* ms */).timeInterval();
+
+			var pauser = new Rx.Subject();
+			var source = Rx.Observable
+							// merge data sources
+							.merge(mockDataSource1, mockDataSource2)
+
+							// return only the interval property from the data set
+							.map((d) => d.interval)
+
+							// filter only values smaller than 50 and bigger than 30
+							.filter((d) => d < 60 && d > 20)
+
+							// no more than 1 data set per 30ms
+							.throttle(50 /* ms */)
+
+							// stop listening for data after 5000 takes
+							.take(5000)
+
+							// retry data get 3 times in case of failure
+							.retry(3)
+
+							// register pause handler; to pause the event flow
+							// simply call: source.pause();
+							// and to resume: source.resume();
+							.pausable(pauser);
+
+			/**
+			 * d3 chart
+			 */
+			var data = [];
+
+			var bounds = { width: 800, height: 200 }
+
+			var svg = d3.select('#chart')
+							.append('svg')
+							.attr('class', 'chart')
+							.attr('width', bounds.width)
+							.attr('height', bounds.height);
+
+			var x = d3.scaleTime()
+							.range([0, bounds.width]);
+
+			var y = d3.scaleLinear()
+							.range([bounds.height, 0]);
+
+			var lineFn = d3.line()
+							.x(function(d) { return x(d.x); })
+							.y(function(d) { return y(d.y); });
+
+			var line = svg.append('g')
+							.append('path')
+							.attr('class', 'line');
+
+			// subscribe and do something with the received data
+			var subscribe = source.subscribe((d) => {
+				data.push({ x: +new Date(), y: d });
+				if (data.length > 200) {
+					data.splice(0, 1);
+				}
+				x.domain(d3.extent(data, function(d) { return d.x; }));
+				y.domain(d3.extent(data, function(d) { return d.y; }));
+				window.requestAnimationFrame(function () { line.datum(data).attr('d', lineFn); });
+			});
+
+			// since we've paused the stream we have to start it
+			// we don't have to do this if you don't register a pause handler
+			// since the stream will be running from start automatically
+			source.resume();
+
+		})();
+	</script>
+</body>
+</html>
