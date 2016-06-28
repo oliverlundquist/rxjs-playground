@@ -54,10 +54,10 @@
 							.merge(mockDataSource1, mockDataSource2)
 
 							// return only the interval property from the data set
-							.map((d) => d.interval)
+							.map(function (d) { return d.interval })
 
 							// filter only values smaller than 50 and bigger than 30
-							.filter((d) => d < 60 && d > 20)
+							.filter(function (d) { return d < 60 && d > 20 })
 
 							// no more than 1 data set per 30ms
 							.throttle(50 /* ms */)
@@ -101,7 +101,7 @@
 							.attr('class', 'line');
 
 			// subscribe and do something with the received data
-			var subscribe = source.subscribe((d) => {
+			var subscribe = source.subscribe(function (d) {
 				data.push({ x: +new Date(), y: d });
 				if (data.length > 200) {
 					data.splice(0, 1);
