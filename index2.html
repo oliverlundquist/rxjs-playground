@@ -2,6 +2,7 @@
 <html>
 <head>
     <title>RxJS Playground</title>
+    <meta name="viewport" content="width=device-width, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <link rel="stylesheet" type="text/css" href="styles/csshake.min.css">
     <link rel="stylesheet" type="text/css" href="styles/font-awesome.min.css">
     <style>
@@ -28,12 +29,14 @@
     <script src="scripts/rx.all.js"></script>
     <script>
         (function bootstrap() {
-            var like      = document.getElementById('like');
-            var progress  = new Rx.BehaviorSubject(0);
-            var done      = new Rx.Subject();
-            var mouseUp   = Rx.Observable.fromEvent(document, 'mouseup');
-            var mouseDown = Rx.Observable.fromEvent(document, 'mousedown');
-            var hold      = Rx.Observable
+            var like       = document.getElementById('like');
+            var progress   = new Rx.BehaviorSubject(0);
+            var done       = new Rx.Subject();
+            var touchEnd   = Rx.Observable.fromEvent(document, 'touchend');
+            var mouseUp    = Rx.Observable.fromEvent(document, 'mouseup').merge(touchEnd);
+            var touchStart = Rx.Observable.fromEvent(document, 'touchstart');
+            var mouseDown  = Rx.Observable.fromEvent(document, 'mousedown').merge(touchStart);
+            var hold       = Rx.Observable
                                 .merge(mouseUp, mouseDown)
                                 .flatMap(function (event) {
                                     return Rx.Observable.interval(30)
@@ -45,8 +48,10 @@
                                 .flatMap(function (event) {
                                     switch (event) {
                                         case 'mouseup':
+                                        case 'touchend':
                                             return Rx.Observable.return(progress.getValue() - 5);
                                         case 'mousedown':
+                                        case 'touchstart':
                                             return Rx.Observable.return(progress.getValue() + 5);
                                         default:
                                             return Rx.Observable.return(progress.getValue());
