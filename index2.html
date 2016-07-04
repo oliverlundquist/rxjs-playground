@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>RxJS Playground</title>
+    <link rel="stylesheet" type="text/css" href="styles/csshake.min.css">
+    <link rel="stylesheet" type="text/css" href="styles/font-awesome.min.css">
+    <style>
+        body {
+            padding-top: 100px;
+            background-color: #FDFDFD;
+        }
+
+        .like {
+            margin: 0 auto;
+            display: block;
+            text-align: center;
+        }
+
+        .icon {
+            color: steelblue;
+        }
+    </style>
+</head>
+<body>
+    <div id="like" class="like">
+        <i class="icon fa fa-thumbs-o-up"></i>
+    </div>
+    <script src="scripts/rx.all.js"></script>
+    <script>
+        (function bootstrap() {
+            var like      = document.getElementById('like');
+            var progress  = new Rx.BehaviorSubject(0);
+            var done      = new Rx.Subject();
+            var mouseUp   = Rx.Observable.fromEvent(document, 'mouseup');
+            var mouseDown = Rx.Observable.fromEvent(document, 'mousedown');
+            var hold      = Rx.Observable
+                                .merge(mouseUp, mouseDown)
+                                .flatMap(function (event) {
+                                    return Rx.Observable.interval(30)
+                                        .map(function () { return event.type; })
+                                        .takeUntil(done)
+                                        .takeUntil(mouseUp)
+                                        .takeUntil(mouseDown);
+                                })
+                                .flatMap(function (event) {
+                                    switch (event) {
+                                        case 'mouseup':
+                                            return Rx.Observable.return(progress.getValue() - 5);
+                                        case 'mousedown':
+                                            return Rx.Observable.return(progress.getValue() + 5);
+                                        default:
+                                            return Rx.Observable.return(progress.getValue());
+                                    }
+                                })
+                                .subscribe(progress);
+
+            progress
+                .filter(function (d) { return d <= 0 || d >= 100; })
+                .subscribe(done);
+
+            progress.subscribe(function (progress) {
+                    var fontSize = progress + 20;
+
+                    like.classList = 'like';
+
+                    if (progress > 20) {
+                        like.classList = 'like shake-constant shake-rotate';
+                    }
+
+                    if (progress > 70) {
+                        like.classList = 'like shake-constant shake-hard';
+                    }
+
+                    like.style.marginTop = -(fontSize / 2) + 'px';
+                    like.style.fontSize = fontSize + 'px';
+                }
+            );
+
+        })();
+    </script>
+</body>
+</html>
