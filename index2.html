@@ -119,7 +119,7 @@
             user-select: none;
             outline-style:none;
             padding-top: 100px;
-            background-color: #FDFDFD;
+            background-color: #fdfdfd;
             font-family: Arial, Helvetica, sans-serif;
         }
 
@@ -147,14 +147,14 @@
         }
 
         .text {
-            color: #DDD;
+            color: #ddd;
             text-align: center;
             padding-top: 30px;
             font-size: 30px;
         }
 
         .text.hidden {
-            color: #FDFDFD;
+            color: #fdfdfd;
         }
     </style>
 </head>
@@ -180,7 +180,12 @@
             var touchStart = Rx.Observable.fromEvent(document, 'touchstart');
             var mouseDown  = Rx.Observable.fromEvent(document, 'mousedown').merge(touchStart);
             var hold       = Rx.Observable
+
+                                // Merge mouse and touchevent streams into one stream
                                 .merge(mouseUp, mouseDown)
+
+                                // Loop over the streams, get the latest value and return an interval repeater
+                                // This repeater will stop when done stream or any mouse/touchevent is triggered.
                                 .flatMap(function (event) {
                                     return Rx.Observable.interval(30)
                                         .map(function () { return event.type; })
@@ -188,6 +193,9 @@
                                         .takeUntil(mouseUp)
                                         .takeUntil(mouseDown);
                                 })
+
+                                // Loop over the return value from the repeater and send out new progress to subscribers.
+                                // The progress will first be published to the progress subject that will then broadcast to subscribers.
                                 .flatMap(function (event) {
                                     switch (event) {
                                         case 'mouseup':
@@ -200,12 +208,17 @@
                                             return Rx.Observable.return(progress.getValue());
                                     }
                                 })
+
+                                // publish progress
                                 .subscribe(progress);
 
-            progress
-                .filter(function (d) { return d <= 0 || d >= 100; })
-                .subscribe(done);
 
+            // Subscribe to progress and trigger done stream when progress is 0 or 100
+            progress.filter(function (progress) { return progress <= 0 || progress >= 100; })
+                    .subscribe(done);
+
+
+            // Render progress on screen
             progress.subscribe(function (progress) {
                     var fontSize = progress + 20;
 
